@@ -751,3 +751,35 @@ sofia_event_callback()
                 =>sofia_handle_sip_i_state()
 ```
 最后18X调用switch_channel_mark_pre_answered()函数，而2XX调用switch_channel_mark_answered()函数。 被叫应答后，之前被挂起的originate激活，根据返回的结果，驱动状态机继续迁移，对于200OK，也就是answer，置状态为CS_EXECUTE。 接下来的迁移就取决于后续的处理了，本例是，执行完bridge后执行1002呼叫流程。
+## 6 mod_sofia模块上报自定义头域
+FreeSWITCH event事件一般都是底层定义好的，这些信息已经很完备，可以满足日常开发需求。但是在某些特殊需求下，需要进行额外的处理。比如，FreeSWITCH注册时间中，就没有X-自定义头域信息。
+在定制化的SIP交换过程中，FreeSWITCH支持自定义头域，头域格式要满足“X-***”的模式。而当我们订阅“sofia::register”事件，在事件中是无法获取自定义头域信息的。
+修改方式如下，在src/mod/endpionts/mod_sofia/sofia_reg.c文件中找到sofia_reg_handle_register_token()函数，并在函数中找到MY_EVENT_REGISTER "sofia::register" 事件的创建和上报流程，添加如下代码：
+
+![image](https://github.com/kenlab-chung/Freeswitch-Kernel-Programming/assets/59462735/d3c32c5b-fa45-4e5f-bc09-d50e49a9619f)
+
+从上面的代码中，我们可以看到“sofia::register”事件中包含的所有头域内容。sofia sip协议栈会解析所有的头域，并把非标准的头域都放到“sip->sip_unknown”中。增的代码中，我们把所有unknown的头域都放到register上报事件中去。
+重新加载mod_sofia模块后，可以看到注册事件中看到"X-"开头的自定义头域消息。
+
+![image](https://github.com/kenlab-chung/Freeswitch-Kernel-Programming/assets/59462735/de3eec6a-bea9-4bf6-96ce-944801593c8b)
+
+## 7 Endpoints媒体交互
+endpoints通讯的目的就是双方都向对方推送己方的媒体数据（包括音频数据、视频数据）。Endpoints媒体的交互在被叫发送SIP/2.0 200 OK之后便开启RTP数据包推送。其中音频和视频数据是分开进行RTP打包的。而且音频RTP包和视频RTP包分别使用各自通讯端口。比如：192.168.1.2上音频RTP数据包收发端口为19132，视频RTP数据包收发端口为16610。如下图所示：
+
+![image](https://github.com/kenlab-chung/Freeswitch-Kernel-Programming/assets/59462735/8b7657cd-f8d3-4cd3-b777-eaf9fe5f7606)
+
+### 7.1 originate 流程
+#### 7.1.1 originate命令使用
+originate用于发起呼叫，命令使用的基础模板：
+```
+originate ALEG BLEG
+```
+在fs_cli控制台使用的完整语法如下：
+```
+originate <call url> <exten>|&<application_name>(<app_args>) [<dialplan>][&lt;context>] [<cid_name>][&lt;cid_num>] [<timeout_sec>]
+```
+其中，
+originate 为命令关键字，为必选字段，用于定义ALEG的呼叫信息，也就是通常说的呼叫字符串，可以通过通道变量定义很多参数;
+|&<application_name>(<app_args>) 为必选字段，用于指定BLEG的分机号码或者用于创建BLEG的app（比如echo、bridge等）;
+[][<context>] 可选参数，该参数用于指定dialplan的context，默认值：xml default ;
+[<timeout_sec>] 可选参数，该参数用于指定originate超时，默认值：60
