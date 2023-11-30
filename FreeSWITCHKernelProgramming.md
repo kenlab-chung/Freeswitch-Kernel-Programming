@@ -2,8 +2,11 @@
 ---
 ## 1 环境
 FreeSWITCH : FreeSWITCH-1.10.11-dev
+
 OS: debian bullseye
+
 gcc:10.2.1
+
 gdb:10.1.99
 
 ## 2 FreeSWITCH启动流程
@@ -158,6 +161,7 @@ fs_cli => reload ... => SWITCH_STANDARD_API(reload_function) => switch_loadable_
 ### 3.3 关键数据结构
 #### 3.3.1 switch_loadable_module_t
 作用：用于定义模块信息。
+
 结构体定义：
 ```
 struct switch_loadable_module {
@@ -178,6 +182,7 @@ struct switch_loadable_module {
 ```
 #### 3.3.2 switch_loadable_module_interface_t
 作用：模块接口（入口）。
+
 结构体定义：
 ```
 /*! \brief The abstraction of a loadable module 模块接口（入口） */
@@ -298,6 +303,7 @@ SWITCH_DECLARE(void *) switch_loadable_module_create_interface(switch_loadable_m
 ```
 #### 3.3.3 switch_endpoint_interface_t
 作用：Endpoints入口。
+
 结构体定义：
 ```
 struct switch_endpoint_interface {
@@ -322,6 +328,7 @@ typedef struct switch_endpoint_interface switch_endpoint_interface_t;
 ```
 #### 3.3.4 switch_io_routines
 作用：存储io操作的回调函数。
+
 结构体定义：
 ```
 struct switch_io_routines {
@@ -360,6 +367,7 @@ typedef struct switch_io_routines switch_io_routines_t;
 ```
 #### 3.3.5 switch_state_handler_table_t
 作用：存储状态机的回调函数
+
 结构体定义：
 ```
 struct switch_state_handler_table {
