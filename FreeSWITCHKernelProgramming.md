@@ -118,7 +118,7 @@ SWITCH_DECLARE_NONSTD(switch_xml_t) __switch_xml_open_root(uint8_t reload, const
             goto done;
         }
     }
-    switch_snprintf(path_buf, sizeof(path_buf), "%s%s%s", SWITCH_GLOBAL_dirs.conf_dir, SWITCH_PATH_SEPARATOR, \　　　　　　　　　　　　SWITCH_GLOBAL_filenames.conf_name);
+    switch_snprintf(path_buf, sizeof(path_buf), "%s%s%s", SWITCH_GLOBAL_dirs.conf_dir, SWITCH_PATH_SEPARATOR, SWITCH_GLOBAL_filenames.conf_name);
     if ((new_main = switch_xml_parse_file(path_buf))) {
         *err = switch_xml_error(new_main);
         switch_copy_string(not_so_threadsafe_error_buffer, *err, sizeof(not_so_threadsafe_error_buffer));
@@ -227,7 +227,7 @@ typedef struct switch_loadable_module_interface switch_loadable_module_interface
 ```
 使用 switch_loadable_module_create_module_interface()函数 来创建 switch_loadable_module_interface_t 实例
 ```
-SWITCH_DECLARE(switch_loadable_module_interface_t *) switch_loadable_module_create_module_interface(switch_memory_pool_t *pool, \　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　const char *name)
+SWITCH_DECLARE(switch_loadable_module_interface_t *) switch_loadable_module_create_module_interface(switch_memory_pool_t *pool,const char *name)
 {
     switch_loadable_module_interface_t *mod;
 
@@ -253,7 +253,7 @@ rtc_endpoint_interface->recover_callback = rtc_recover_callback;
 ```
 具体实现如下：
 ```
-SWITCH_DECLARE(void *) switch_loadable_module_create_interface(switch_loadable_module_interface_t *mod, \　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　switch_module_interface_name_t iname)
+SWITCH_DECLARE(void *) switch_loadable_module_create_interface(switch_loadable_module_interface_t *mod,　switch_module_interface_name_t iname)
 {
     switch (iname) {
     case SWITCH_ENDPOINT_INTERFACE:
