@@ -1,4 +1,5 @@
 # FreeSWITCH内核编程
+---
 ## 1 环境
 FreeSWITCH : FreeSWITCH-1.10.11-dev
 OS: debian bullseye
@@ -20,5 +21,89 @@ switch_console_loop()函数分两种情况启动，一种是使用跨平台库li
 - 调用switch_loadable_module_init()函数外围模块。
 ## 3.4 模块开发实例
 ### 3.4.1 实现一个api
-
+以模块mod_bsoft为例。实现一个hello_bsoft api接口。
+在src/mod/endpoints目录下创建mod_bsoft目录。
+把模块名加入到modules.conf中，make时根据此文件选择编译哪些模块，并生成相应的makefile文件。
 ![image](https://github.com/kenlab-chung/Freeswitch-Kernel-Programming/assets/59462735/61d53f62-da03-4f52-8876-1272e49e8e31)
+在configure.ac中加入mod_bsoft的Makefile配置：
+![image](https://github.com/kenlab-chung/Freeswitch-Kernel-Programming/assets/59462735/d2dea185-25d0-4cf6-aa48-6d1e5ec80f90)
+在mod_bsoft目录中创建mod_bsoft.c文件。代码如下：
+```
+/*************************************************************************
+  > File Name: mod_bsoft.c
+  > Author: zhongqf
+  > Mail: zhongqf.cn@gmail.com
+  > Created Time: 2023-11-22 15:42:03
+ ************************************************************************/
+
+#include<switch.h>
+SWITCH_MODULE_LOAD_FUNCTION(mod_bsoft_load);
+SWITCH_MODULE_RUNTIME_FUNCTION(mod_bsoft_runtime);
+SWITCH_MODULE_SHUTDOWN_FUNCTION(mod_bsoft_shutdown);
+SWITCH_MODULE_DEFINITION(mod_bsoft,mod_bsoft_load,mod_bsoft_shutdown,mod_bsoft_runtime);
+
+SWITCH_STANDARD_API(hello_bsoft)
+{
+    switch_log_printf(SWITCH_CHANNEL_LOG,SWITCH_LOG_NOTICE,"hello bsoft!\n");
+    return SWITCH_STATUS_SUCCESS;
+}
+
+SWITCH_MODULE_LOAD_FUNCTION(mod_bsoft_load)
+{
+    switch_api_interface_t *api_interface;
+    *module_interface = switch_loadable_module_create_module_interface(pool,modname);
+    SWITCH_ADD_API(api_interface,"hello_bsoft","hello bosft API",hello_bsoft,"syntax");
+    return SWITCH_STATUS_SUCCESS;
+}
+SWITCH_MODULE_RUNTIME_FUNCTION(mod_bsoft_runtime)
+{
+    int i=0;
+    while(i<=10)
+    {
+        switch_log_printf(SWITCH_CHANNEL_LOG,SWITCH_LOG_NOTICE,"hello from bsoft!\n");
+        switch_yield(100000);
+        i++;
+    }
+    return SWITCH_STATUS_TERM;
+}
+SWITCH_MODULE_SHUTDOWN_FUNCTION(mod_bsoft_shutdown)
+{
+    switch_log_printf(SWITCH_CHANNEL_LOG,SWITCH_LOG_NOTICE,"mod_bsoft shutdown!\n");
+    return SWITCH_STATUS_SUCCESS;
+
+}
+```
+编写makefile.am文件： 
+```
+include $(top_srcdir)/build/modmake.rulesam
+MODNAME=mod_bsoft
+
+mod_LTLIBRARIES = mod_bsoft.la
+mod_bsoft_la_SOURCES  = mod_bsoft.c
+mod_bsoft_la_CFLAGS   = $(AM_CFLAGS)
+mod_bsoft_la_LIBADD   = $(switch_builddir)/libfreeswitch.la
+mod_bsoft_la_LDFLAGS  = -avoid-version -module -no-undefined -shared
+```
+执行freeswitch源码目录下执行
+```
+./bootstrap.sh && ./configure --prefix=/opt/freeswitch_install/
+```
+可以看到mod_bsoft目录下产生了一个Makefile文件。此时可以执行在此目录下编译单独编译模块，并部署到安装目录下。
+```
+make && make install
+```
+也可以在freeswitch元目录下执行：
+```
+make mod_bsoft && make mod_bsoft-install
+```
+在freeswitch安装目录下可以看到mod_bsoft模块相关文件：
+![image](https://github.com/kenlab-chung/Freeswitch-Kernel-Programming/assets/59462735/1c274c3e-0ef7-4ffe-a745-cacf4dc2d0ee)
+在控制台中加载mod_bsoft模块，可以看到模块可以正常加载，并打印runtime中的日志。
+![image](https://github.com/kenlab-chung/Freeswitch-Kernel-Programming/assets/59462735/935a35f7-a763-4388-823d-a777ec76b36e)
+可以调用模块中定义的hello_bsoft接口
+![image](https://github.com/kenlab-chung/Freeswitch-Kernel-Programming/assets/59462735/630e2f43-e5e7-4851-b449-8f49585a71a0)
+可以正常卸载：
+![image](https://github.com/kenlab-chung/Freeswitch-Kernel-Programming/assets/59462735/bdd76918-d75d-4a84-8aaf-2e806b710555)
+### 3.4.2 实现一个Dialplan
+
+
