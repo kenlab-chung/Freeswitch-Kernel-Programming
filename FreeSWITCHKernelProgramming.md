@@ -527,6 +527,227 @@ make mod_bsoft && make mod_bsoft-install
 
 ![image](https://github.com/kenlab-chung/Freeswitch-Kernel-Programming/assets/59462735/bdd76918-d75d-4a84-8aaf-2e806b710555)
 
-### 3.4.2 实现一个Dialplan
+#### 3.4.2 实现一个Dialplan
+在SWITCH_MODULE_LOAD_FUNCTION中新增一个Dialplan变量声明：
+```
+switch_dialplan_interface_t *dp_interface;
+```
+在*module_interface之后，向Freeswitch核心注册一个新的Dialplan，并设置一个回调函数：
+```
+SWITCH_ADD_DIALPLAN(dp_interface,"bsoft_dialplan",bsoft_dialplan_hunt);
+```
+实现这个回调函数：
+```
+SWITCH_STANDARD_DIALPLAN(bsoft_dialplan_hunt)
+{
+    switch_caller_extension_t * extension = NULL;
+    switch_channel_t *channel = switch_core_session_get_channel(session);
+    if(!caller_profile)
+    {
+        caller_profile =switch_channel_get_caller_profile(channel);
+    }
+    switch_log_printf(SWITCH_CHANNEL_SESSION_LOG(session),SWITCH_LOG_INFO,
+            "Processing %s <%s>->%s in context %s\n",
+            caller_profile->caller_id_name,
+            caller_profile->caller_id_number,
+            caller_profile->destination_number,
+            caller_profile->context
+            );
 
+    extension = switch_caller_extension_new(session,"bsoft_dialplan","bsoft_dialplan");
 
+    if(!extension) abort();
+
+    switch_caller_extension_add_application(session,extension,"log","Info , bsoft_dialplan");
+
+    return extension;
+}
+```
+在控制台执行：
+```
+freeswitch@debian> originate user/1001 9999 bsoft_dialplan
+```
+![image](https://github.com/kenlab-chung/Freeswitch-Kernel-Programming/assets/59462735/efdb2663-dd12-4ec3-a68d-f789dfe47804)
+
+其中9999为Extension，bsoft_dialplan为Dialplan，Context没设置，默认为default。
+ 
+#### 3.4.3 实现一个application
+在SWITCH_MODULE_LOAD_FUNCTION中新增一个Application变量声明
+```
+switch_application_interface_t *app_interface;
+```
+在*module_interface之后，向Freeswitch核心注册一个新的Application，并设置一个回调函数：
+```
+ SWITCH_ADD_APP(app_interface,"bsoft_app","bsoft_app demo","bsoft_app Demo",bsoft_app_fun,"[name]",SAF_SUPPORT_NOMEDIA);
+```
+实现这个函数：
+```
+SWITCH_STANDARD_APP(bsoft_app_fun)
+{
+
+}
+```
+通过控制台执行show modules mod_bsoft命令可以看到刚刚实现的api 、dialplan和application:
+
+![image](https://github.com/kenlab-chung/Freeswitch-Kernel-Programming/assets/59462735/58014879-c6cb-468a-8597-65599d952e93)
+
+#### 3.4.4 事件订阅
+在mod_bsoft_load()函数中添加 switch_event_bind()。
+```
+ switch_event_bind("mod_bsoft", SWITCH_EVENT_ALL, SWITCH_EVENT_SUBCLASS_ANY, on_channel_progress, NULL); 
+```
+并实现事件侦听函数：
+```
+static void  on_channel_progress(switch_event_t *event) 
+{
+     switch_log_printf(SWITCH_CHANNEL_LOG,SWITCH_LOG_INFO,"event id:%d owner:%s event name:%s\n",
+　　　event->event_id,event->owner,event->subclass_name);
+}
+```
+## 4 调试
+### 4.1 设置日志级别 
+mod_sofia模块接口设置sofia sip协议栈的日志级别，0关闭调试日志，9最高包括函数调用退出流程的日志打印。all会影响所有模块的日志级别。
+```
+sofia loglevel <all|default|tport|iptsec|nea|nta|nth_client|nth_server|nua|soa|sresolv|stun> [0-9]
+```
+开启sofia最高级别日志：
+```
+fsctl loglevel 6
+sofia loglevel all 9
+```
+关闭sofia日志
+```
+sofia loglevel all 0
+```
+###  4.2 堆栈打印
+使用系统库函数打印堆栈来查看调用流程。以通过堆栈来查看channel初始化流程为例。在FreeSWITCH呼叫业务中，我们最常见的日志就是呼叫通道的启动信息，日志如下：
+```
+[NOTICE] switch_channel.c:1142 New Channel sofia/internal/1001@192.168.1.2 [c30832f7-7af7-4517-9ea9-310f6c4da6a4]
+```
+这个日志表示一个新的会话channel初始完成。定位到src/switch_channel.c文件switch_channel_set_name()函数。在New Channel 信息打印之后执行print_stack()函数。
+
+![image](https://github.com/kenlab-chung/Freeswitch-Kernel-Programming/assets/59462735/06569ee8-2046-4c56-a59c-a632fa5b1227)
+
+实现print_stack()函数：
+```
+#include <execinfo.h>
+static void print_stack()
+{
+        void *stacktrace[99];
+        char **symbols;
+        int size,i;
+        size = backtrace(stacktrace,99);
+        symbols = backtrace_symbols(stacktrace,size);
+        if(!symbols)
+        {
+                return;
+        }
+        for(i=0;i<size;i++)
+        {
+                switch_log_printf(SWITCH_CHANNEL_LOG,SWITCH_LOG_NOTICE,"STACK:%s\n",symbols[i]);
+        }
+        free(symbols);
+}
+```
+重新编译和安装FreeSWITCH。启动FreeSWITCH后发起INVITE呼叫。
+```
+switch_channel.c:1161 New Channel sofia/internal/1001@192.168.1.2 [1f1d7158-c050-463a-893b-ce7be864d7dd]
+switch_channel.c:1140 STACK:/opt/freeswitch_install/lib/libfreeswitch.so.1(+0x6268f) [0x7fdd7190468f]
+switch_channel.c:1140 STACK:/opt/freeswitch_install/lib/libfreeswitch.so.1(switch_channel_set_name+0x176) [0x7fdd7190c096]
+switch_channel.c:1140 STACK:./lib/freeswitch/mod/mod_sofia.so(+0x551a4) [0x7fdd6de7b1a4]
+switch_channel.c:1140 STACK:./lib/freeswitch/mod/mod_sofia.so(+0x53ed2) [0x7fdd6de79ed2]
+switch_channel.c:1140 STACK:/home/freeswitch-1.10.10-dev/lib/libsofia-sip-ua.so.0(+0xc7e1b) [0x7fdd710d1e1b]
+switch_channel.c:1140 STACK:/home/freeswitch-1.10.10-dev/lib/libsofia-sip-ua.so.0(+0x135313) [0x7fdd7113f313]
+switch_channel.c:1140 STACK:/home/freeswitch-1.10.10-dev/lib/libsofia-sip-ua.so.0(su_base_port_getmsgs+0x73) [0x7fdd7113f09d]
+switch_channel.c:1140 STACK:/home/freeswitch-1.10.10-dev/lib/libsofia-sip-ua.so.0(su_base_port_step+0x165) [0x7fdd7113f655]
+switch_channel.c:1140 STACK:/home/freeswitch-1.10.10-dev/lib/libsofia-sip-ua.so.0(+0x131734) [0x7fdd7113b734]
+switch_channel.c:1140 STACK:/home/freeswitch-1.10.10-dev/lib/libsofia-sip-ua.so.0(su_root_step+0x6e) [0x7fdd7113c87b]
+switch_channel.c:1140 STACK:./lib/freeswitch/mod/mod_sofia.so(+0x3dcb3) [0x7fdd6de63cb3]
+switch_channel.c:1140 STACK:/lib/x86_64-linux-gnu/libpthread.so.0(+0x7ea7) [0x7fdd7186cea7]
+switch_channel.c:1140 STACK:/lib/x86_64-linux-gnu/libc.so.6(clone+0x3f) [0x7fdd7178ca2f]
+```
+通过“addr2line”工具，使用模块名和偏移地址，查找函数名：
+```
+addr2line 0x6268f -e /opt/freeswitch_install/lib/libfreeswitch.so.1 -f
+print_stack
+/opt/freeswitch/src/switch_channel.c:1133
+
+addr2line 0x551a4 -e ./lib/freeswitch/mod/mod_sofia.so -f
+sofia_glue_set_name
+/opt/freeswitch/src/mod/endpoints/mod_sofia/sofia_glue.c:70
+
+addr2line 0x53ed2 -e ./lib/freeswitch/mod/mod_sofia.so -f
+set_call_id
+/opt/freeswitch/src/mod/endpoints/mod_sofia/sofia.c:2385
+
+addr2line 0xc7e1b -e /home/freeswitch-1.10.10-dev/lib/libsofia-sip-ua.so.0 -f
+nua_application_event
+nua_stack.c:?
+
+addr2line 0x135313 -e /home/freeswitch-1.10.10-dev/lib/libsofia-sip-ua.so.0 -f
+su_base_port_execute_msgs
+su_base_port.c:?
+
+addr2line 0x131734 -e /home/freeswitch-1.10.10-dev/lib/libsofia-sip-ua.so.0 -f
+su_port_step
+su_root.c:?
+
+addr2line 0x3dcb3 -e ./lib/freeswitch/mod/mod_sofia.so -f
+sofia_profile_thread_run
+/opt/freeswitch/src/mod/endpoints/mod_sofia/sofia.c:3472
+
+addr2line 0x7ea7 -e /lib/x86_64-linux-gnu/libpthread.so.0 -f
+start_thread
+./nptl/pthread_create.c:478 (discriminator 6)
+```
+可以看出Invite初始channel流程如下：
+```
+start_thread()
+=>sofia_profile_thread_run()//mod_sofia模块，启动profile端口监听
+    =>su_root_step()
+        =>su_port_step()
+            =>su_base_port_step() //sofia_sip库，端口收到消息。
+                =>su_base_port_getmsgs()
+                    =>su_base_port_execute_msgs() //sofia_sip库，分发消息
+                        =>nua_application_event()
+                            =>set_call_id()
+                                =>sofia_glue_set_name() //mod_sofia模块，设置channel名称。
+                                    =>switch_channel_set_name() //freeswitch核心，设置channel名称。
+                                        =>print_stack()
+```
+## 5 呼叫流程
+在fs_cli命令发一路外呼，注意字符串写的是sofia/192.168.1.2/1001,直接指定sofia的具体profile，而不是user/1001，因为后者是个虚拟的逻辑概念。
+```
+originate sofia/192.168.1.2/1001 &bridge(sofia/192.168.1.2/1002)
+```
+fs_cli是典型的ESL客户端，所以接收端是mod_event_socketd的监听线程listener_run。
+```
+listener_run()
+    =>parse_command()
+        =>api_exec()
+            =>switch_api_execute()
+                =>switch_loadable_module_get_api_interface()
+                    =>originate_function() //mod_dpcommand
+                        =>switch_ivr_originate()
+                            =>switch_core_session_outgoing_channel()
+                                =>endpoint_interface->io_routines->outgoing_channel()
+                                    =>sofia_outgoing_channel() //mod_sofia
+                                        =>switch_core_session_request_uuid() 
+                                            =>switch_channel_init()
+```
+最终在mod_sofia模块中创建Session对象，并调用switch_channel_init()将状态机设置为CS_INIT。
+状态机驱动之后，调用mod_sofia模块的状态回调函数sofia_on_init()函数中的sofia_glue_do_invite()函数发送INVITE消息。然后，核心状态函数switch_core_standard_on_init()驱动状态迁移到CS_ROUTING状态。这时拨号方案执行列表就是我们最开始的命令：
+```
+&bridge(sofia/192.168.1.2/1002)
+```
+originate模块添加的状态回调函数originate_on_routing被调用时，驱动状态机迁移到CS_CONSUME_MEDIA状态。这时originate 挂起，等待被叫方的响应。
+
+sofia协议栈收到消息时，抛出事件，并调用sofia_event_callback回调函数。对于应答消息18X和2XX，调用链差不多：
+```
+sofia_event_callback()
+    =>sofia_queue_message()
+        =>sofia_process_dispatch_event()
+            =>our_sofia_event_callback
+                =>sofia_handle_sip_i_state()
+```
+最后18X调用switch_channel_mark_pre_answered()函数，而2XX调用switch_channel_mark_answered()函数。 被叫应答后，之前被挂起的originate激活，根据返回的结果，驱动状态机继续迁移，对于200OK，也就是answer，置状态为CS_EXECUTE。 接下来的迁移就取决于后续的处理了，本例是，执行完bridge后执行1002呼叫流程。
