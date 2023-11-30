@@ -24,9 +24,13 @@ switch_console_loop()函数分两种情况启动，一种是使用跨平台库li
 以模块mod_bsoft为例。实现一个hello_bsoft api接口。
 在src/mod/endpoints目录下创建mod_bsoft目录。
 把模块名加入到modules.conf中，make时根据此文件选择编译哪些模块，并生成相应的makefile文件。
+
 ![image](https://github.com/kenlab-chung/Freeswitch-Kernel-Programming/assets/59462735/61d53f62-da03-4f52-8876-1272e49e8e31)
+
 在configure.ac中加入mod_bsoft的Makefile配置：
+
 ![image](https://github.com/kenlab-chung/Freeswitch-Kernel-Programming/assets/59462735/d2dea185-25d0-4cf6-aa48-6d1e5ec80f90)
+
 在mod_bsoft目录中创建mod_bsoft.c文件。代码如下：
 ```
 /*************************************************************************
