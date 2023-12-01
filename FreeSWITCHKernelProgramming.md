@@ -783,3 +783,292 @@ originate 为命令关键字，为必选字段，用于定义ALEG的呼叫信息
 |&<application_name>(<app_args>) 为必选字段，用于指定BLEG的分机号码或者用于创建BLEG的app（比如echo、bridge等）;
 [][<context>] 可选参数，该参数用于指定dialplan的context，默认值：xml default ;
 [<timeout_sec>] 可选参数，该参数用于指定originate超时，默认值：60
+
+#### 7.1.2 originate功能入口函数
+入口函数为originate_function，在 mod_commands_load 中绑定：
+```
+SWITCH_ADD_API(commands_api_interface, "originate", "Originate a call", originate_function, ORIGINATE_SYNTAX);
+```
+具体实现如下：
+```
+SWITCH_STANDARD_API(originate_function)
+{
+    switch_channel_t *caller_channel;
+    switch_core_session_t *caller_session = NULL;
+    char *mycmd = NULL, *argv[10] = { 0 };
+    int i = 0, x, argc = 0;
+    char *aleg, *exten, *dp, *context, *cid_name, *cid_num;
+    uint32_t timeout = 60;
+    switch_call_cause_t cause = SWITCH_CAUSE_NORMAL_CLEARING;
+    switch_status_t status = SWITCH_STATUS_SUCCESS;
+
+    if (zstr(cmd)) {
+        stream->write_function(stream, "-USAGE: %s\n", ORIGINATE_SYNTAX);
+        return SWITCH_STATUS_SUCCESS;
+    }
+
+    /* log warning if part of ongoing session, as we'll block the session */
+    if (session){
+        switch_log_printf(SWITCH_CHANNEL_SESSION_LOG(session), 　　　　　　SWITCH_LOG_NOTICE, 　　　　　　"Originate can take 60 seconds to complete, and blocks the existing session. Do not confuse with a lockup.\n");
+    }
+
+    mycmd = strdup(cmd);
+    switch_assert(mycmd);
+    argc = switch_separate_string(mycmd, ' ', argv, (sizeof(argv) / sizeof(argv[0])));
+
+    if (argc < 2 || argc > 7) {
+        stream->write_function(stream, "-USAGE: %s\n", ORIGINATE_SYNTAX);
+        goto done;
+    }
+
+    for (x = 0; x < argc && argv[x]; x++) {
+        if (!strcasecmp(argv[x], "undef")) {
+            argv[x] = NULL;
+        }
+    }
+
+    aleg = argv[i++];
+    exten = argv[i++];
+    dp = argv[i++];
+    context = argv[i++];
+    cid_name = argv[i++];
+    cid_num = argv[i++];
+
+    switch_assert(exten);
+
+    if (!dp) {
+        dp = "XML";
+    }
+
+    if (!context) {
+        context = "default";
+    }
+
+    if (argv[6]) {
+        timeout = atoi(argv[6]);
+    }
+
+    if (switch_ivr_originate(NULL, &caller_session, &cause, aleg, timeout, NULL, cid_name, cid_num, NULL, NULL, SOF_NONE, NULL, NULL) 　　　　 != SWITCH_STATUS_SUCCESS
+        || !caller_session) {
+            stream->write_function(stream, "-ERR %s\n", switch_channel_cause2str(cause));
+        goto done;
+    }
+
+    caller_channel = switch_core_session_get_channel(caller_session);
+
+    if (*exten == '&' && *(exten + 1)) {
+        switch_caller_extension_t *extension = NULL;
+        char *app_name = switch_core_session_strdup(caller_session, (exten + 1));
+        char *arg = NULL, *e;
+
+        if ((e = strchr(app_name, ')'))) {
+            *e = '\0';
+        }
+
+        if ((arg = strchr(app_name, '('))) {
+            *arg++ = '\0';
+        }
+
+        if ((extension = switch_caller_extension_new(caller_session, app_name, arg)) == 0) {
+            switch_log_printf(SWITCH_CHANNEL_SESSION_LOG(session), SWITCH_LOG_CRIT, "Memory Error!\n");
+            abort();
+        }
+        switch_caller_extension_add_application(caller_session, extension, app_name, arg);
+        switch_channel_set_caller_extension(caller_channel, extension);
+        switch_channel_set_state(caller_channel, CS_EXECUTE);
+    } else {
+        switch_ivr_session_transfer(caller_session, exten, dp, context);
+    }
+
+    stream->write_function(stream, "+OK %s\n", switch_core_session_get_uuid(caller_session));
+
+    switch_core_session_rwunlock(caller_session);
+
+  done:
+    switch_safe_free(mycmd);
+    return status;
+}
+```
+调用流程如下：
+```
+originate_function 
+    => switch_ivr_originate 
+        => switch_core_session_outgoing_channel 
+            => endpoint_interface->io_routines->outgoing_channel
+ 　　　　=> switch_core_session_thread_launch
+```
+#### 7.1.3 switch_ivr_originate函数
+该函数用于发起具体的呼叫。switch_ivr_originate函数定义：
+```
+SWITCH_DECLARE(switch_status_t) switch_ivr_originate(
+    switch_core_session_t *session,                          //发起originate的channel，即 caller_channel , aleg
+    switch_core_session_t **bleg,                            //originate所在的leg，会在该函数赋值
+    switch_call_cause_t *cause,                                //失败原因，会在该函数赋值
+    const char *bridgeto,                                    //bleg的呼叫字符串，只读
+    uint32_t timelimit_sec,                                    //originate超时时间
+    const switch_state_handler_table_t *table,                //bleg的状态机回调函数
+    const char *cid_name_override,                            //origination_caller_id_name，用于设置主叫名称
+    const char *cid_num_override,                            //origination_caller_id_number，用于设置主叫号码
+    switch_caller_profile_t *caller_profile_override,        //主叫的profile
+    switch_event_t *ovars, switch_originate_flag_t flags,    //originate导出的通道变量（从aleg）
+    switch_call_cause_t *cancel_cause,                        // originate取消原因
+    switch_dial_handle_t *dh)                                // dial handle,功能类似呼叫字符串，可以设置多条leg同时originate
+```
+如果outgoing_channel执行成功，会在函数switch_core_session_outgoing_channel()中发送SWITCH_EVENT_CHANNEL_OUTGOING事件；并且该channel会设置上CF_ORIGINATING标识位。
+```
+if (switch_event_create(&event, SWITCH_EVENT_CHANNEL_OUTGOING) == SWITCH_STATUS_SUCCESS) {
+    switch_channel_event_set_data(peer_channel, event);
+    switch_event_fire(&event);
+}
+```
+使用switch_core_session_thread_launch()启动线程创建session ：
+```
+if (!switch_core_session_running(oglobals.originate_status[i].peer_session)) {
+    if (oglobals.originate_status[i].per_channel_delay_start) {
+        switch_channel_set_flag(oglobals.originate_status[i].peer_channel, CF_BLOCK_STATE);
+    }
+    switch_core_session_thread_launch(oglobals.originate_status[i].peer_session);
+}
+```
+### 7.2 bridge流程
+#### 7.2.1 流程入口
+bridge app入口(mod_dptools.c)：
+
+![image](https://github.com/kenlab-chung/Freeswitch-Kernel-Programming/assets/59462735/ab4705b1-040d-4b0d-9504-972f1fd87434)
+
+函数调用链：
+
+```
+audio_bridge_function 
+    => switch_ivr_signal_bridge
+or  => switch_ivr_multi_threaded_bridge 
+```
+uuid_bridge api入口（mod_commands.c）：
+
+![image](https://github.com/kenlab-chung/Freeswitch-Kernel-Programming/assets/59462735/324b64ba-d390-40b6-bfa7-aa81ae4f68b1)
+
+函数调用链：
+```
+uuid_bridge_function => switch_ivr_uuid_bridge
+```
+#### 7.2.2 bridge机制
+注册回调函数：
+```
+static const switch_state_handler_table_t audio_bridge_peer_state_handlers = {
+    /*.on_init */ NULL,
+    /*.on_routing */ audio_bridge_on_routing,
+    /*.on_execute */ NULL,
+    /*.on_hangup */ NULL,
+    /*.on_exchange_media */ audio_bridge_on_exchange_media,
+    /*.on_soft_execute */ NULL,
+    /*.on_consume_media */ audio_bridge_on_consume_media,
+};
+```
+ 状态机里面进行回调, 当channel进入CS_EXCHANGE_MEDIA状态后，回调 audio_bridge_on_exchange_media 函数，触发audio_bridge_thread线程。
+### 7.3 媒体交互流程
+#### 7.3.1 注册编码类型
+在函数mod_spandsp_codecs_load()中调用switch_core_codec_add_implementation()函数注册音频编解码。
+
+例如添加PCMU编码
+```
+switch_core_codec_add_implementation(pool, codec_interface, SWITCH_CODEC_TYPE_AUDIO,    /* enumeration defining the type of the codec */
+                                             0,    /* the IANA code number */
+                                             "PCMU",    /* the IANA code name */
+                                             NULL,    /* default fmtp to send (can be overridden by the init function) */
+                                             8000,    /* samples transferred per second */
+                                             8000,    /* actual samples transferred per second */
+                                             64000,    /* bits transferred per second */
+                                             mpf * count,    /* number of microseconds per frame */
+                                             spf * count,    /* number of samples per frame */
+                                             bpf * count,    /* number of bytes per frame decompressed */
+                                             ebpf * count,    /* number of bytes per frame compressed */
+                                             1,    /* number of channels represented */
+                                             spf * count,    /* number of frames per network packet */
+                                             switch_g711u_init,    /* function to initialize a codec handle using this implementation */
+                                             switch_g711u_encode,    /* function to encode raw data into encoded data */
+                                             switch_g711u_decode,    /* function to decode encoded data into raw data */
+                                             switch_g711u_destroy);    /* deinitalize a codec handle using this implementation */
+```
+#### 7.3.2 RTP数据交互及转码 
+函数调用链：
+```
+audio_bridge_on_exchange_media => audio_bridge_thread
+```
+收发音频数据：
+```
+audio_bridge_thread 
+    => switch_core_session_read_frame
+         => need_codec
+         => switch_core_codec_decode （调用implement的encode进行转码操作，比如 switch_g711a_decode)
+     => session->endpoint_interface->io_routines->read_frame 即： sofia_read_frame
+         => switch_core_media_read_frame
+       　　 => switch_rtp_zerocopy_read_frame
+            => rtp_common_read
+            　　=> read_rtp_packet
+                  => switch_socket_recvfrom
+
+
+audio_bridge_thread 
+    => switch_core_session_write_frame
+         => switch_core_session_start_audio_write_thread (ptime不一致时启动线程，有500长度的队列)
+          => switch_core_codec_encode （调用implement的encode进行转码操作，比如 switch_g711u_encode)
+     => perform_write
+        => session->endpoint_interface->io_routines->write_frame 比如： sofia_write_frame
+        => switch_core_media_write_frame
+            => switch_rtp_write_frame
+            　　=>switch_socket_sendto
+                =>rtp_common_write
+```
+## 8 FreeSWITCH内核与Sofia模块协同工作流程分析
+FreeSWITCH 调用SIP协议栈实现SIP协议交换层级如下：
+
+![image](https://github.com/kenlab-chung/Freeswitch-Kernel-Programming/assets/59462735/6a349cb3-bc6c-4b6a-9741-274ad44cba4e)
+### 8.1 FreeSWITCH Core
+#### 8.1.1 模块加载过程
+freeswitch主程序初始化时会从modules.conf.xml文件中读取配置，如果配置中如下内容生效，FreeSWITCH启动时则执行加载sofia模块操作。
+```
+<load module="mod_sofia"/>
+```
+具体过程如下：
+```
+main()
+    =>switch_core_init_and_modload()
+        =>switch_loadable_module_init()
+            =>switch_loadable_module_load_module_ex()// 读取xml文件并加载模块
+```
+#### 8.1.2 状态机
+##### 8.1.2.1 状态机初始化
+在如下函数中实现状态机初始化
+```
+switch_core_session_run()
+```
+##### 8.1.2.2  改变状态机状态
+通过调用switch_channel_set_state来实现状态机的状态改变。
+
+##### 8.1.2.3 处理状态变化
+当状态发生变化后，通过switch_channel_set_running_state函数来改变running_state，并执行相关的回调来通知其状态已经发生改变：
+```
+endpoint_interface->io_routines->state_run()
+```
+**主叫变化**
+- CS_NEW
+switch_core_session_run初始状态为CS_NEW
+- CS_INIT
+sofia_handle_sip_i_state
+
+case nua_callstate_received (收到invite请求) 修改状态机的状态 ：CS_NEW ==> CS_INIT switch_channel_set_state(channel, CS_INIT);
+
+switch_core_session_run
+
+状态机处理状态变化 STATE_MACRO(init, "INIT"); on_init 即 ： sofia_on_init
+
+switch_core_standard_on_init
+- CS_ROUTING
+sofia_on_init
+修改状态机的状态 ： CS_INIT == > CS_ROUTING
+switch_channel_set_state(channel, CS_ROUTING);
+switch_core_session_run
+状态机处理状态变化 STATE_MACRO(routing, "ROUTING"); on_routing 即 ： sofia_on_routing
+switch_core_standard_on_routing
+
+
