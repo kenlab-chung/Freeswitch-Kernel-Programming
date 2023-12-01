@@ -1052,8 +1052,10 @@ endpoint_interface->io_routines->state_run()
 ```
 **主叫变化**
 - CS_NEW
+
 switch_core_session_run初始状态为CS_NEW
 - CS_INIT
+
 sofia_handle_sip_i_state
 
 case nua_callstate_received (收到invite请求) 修改状态机的状态 ：CS_NEW ==> CS_INIT switch_channel_set_state(channel, CS_INIT);
@@ -1064,11 +1066,146 @@ switch_core_session_run
 
 switch_core_standard_on_init
 - CS_ROUTING
+
 sofia_on_init
+
 修改状态机的状态 ： CS_INIT == > CS_ROUTING
+
 switch_channel_set_state(channel, CS_ROUTING);
+
 switch_core_session_run
+
 状态机处理状态变化 STATE_MACRO(routing, "ROUTING"); on_routing 即 ： sofia_on_routing
+
 switch_core_standard_on_routing
 
+- CS_EXECUTE
+
+witch_core_standard_on_routing 修改状态机的状态 ： CS_ROUTING == > CS_EXECUTE switch_channel_set_state(session->channel, CS_EXECUTE);
+
+switch_core_session_run
+
+状态机处理状态变化 STATE_MACRO(execute, "EXECUTE"); on_execute 即 ： sofia_on_execute
+
+switch_core_standard_on_execute
+
+- CS_HANGUP
+
+sofia_handle_sip_i_bye switch_channel_hangup ： 即 switch_channel_perform_hangup 修改状态机的状态 channel->state = CS_HANGUP;
+```
+状态机处理状态变化
+    switch_core_session_hangup_state            
+        STATE_MACRO(hangup, "HANGUP");
+```
+
+**被叫变化**
+
+- CS_NEW
+
+switch_core_session_run初始状态为CS_NEW
+
+- CS_INIT
+
+sofia_outgoing_channel 修改状态机的状态 ：CS_NEW ==> CS_INIT switch_channel_set_state(nchannel, CS_INIT);
+
+状态机处理逻辑参考主叫。
+
+- CS_ROUTING
+
+sofia_on_init
+
+修改状态机的状态 ： CS_INIT == > CS_ROUTING switch_channel_set_state(channel, CS_ROUTING);
+
+状态机处理逻辑参考主叫。
+
+- CS_CONSUME_MEDIA
+
+originate_on_routing 修改状态机的状态：CS_ROUTING -> CS_CONSUME_MEDIA switch_channel_set_state(channel, CS_CONSUME_MEDIA);
+
+switch_core_session_run
+
+状态机处理状态变化 STATE_MACRO(consume_media, "CONSUME_MEDIA"); on_ consume_media 即 ： switch_core_standard_on_consume_media
+
+- CS_EXCHANGE_MEDIA
+
+switch_core_session_run
+
+状态机处理状态变化 STATE_MACRO(exchange_media, "EXCHANGE_MEDIA"); on_exchange_media 即 ： sofia_on_exchange_media
+
+switch_core_standard_on_exchange_media
+
+- CS_HANGUP
+
+audio_bridge_on_exchange_media
+
+switch_channel_hangup ： 即 switch_channel_perform_hangup 修改状态机的状态 channel->state = CS_HANGUP;
+
+```
+状态机处理状态变化
+    switch_core_session_hangup_state
+        STATE_MACRO(hangup, "HANGUP");
+```
+### 8.2 Sofia应用层
+模块结构：
+
+![image](https://github.com/kenlab-chung/Freeswitch-Kernel-Programming/assets/59462735/55abc5fc-c99d-4bfc-9f05-d9a2fb41e938)
+
+#### 8.2.1 模块加载过程
+启动事件处理线程池 ：
+```
+SWITCH_MODULE_LOAD_FUNCTION(mod_sofia_load)
+    => sofia_msg_thread_start(0);
+        => sofia_msg_thread_run
+            => sofia_process_dispatch_event
+                => our_sofia_event_callback : 处理消息
+```
+启动服务器监听 ：
+```
+SWITCH_MODULE_LOAD_FUNCTION(mod_sofia_load)
+    => config_sofia(0, NULL)
+        => launch_sofia_profile_thread
+            => sofia_profile_thread_run                
+                => nua_create
+                    => su_home_new
+                    => nua_stack_init                    
+                        => nta_agent_create
+                            => nta_agent_add_tport                            
+                                => tport_tbind
+                                    => tport_bind_server
+                                        => tport_listen ： 监听客户端发来的数据
+```
+#### 8.2.2 数据库表格
+freeswitch core 相关：
+- aliases
+- calls
+- channels
+- complete
+- interfaces
+- nat
+- recovery
+- registrations
+- tasks
+
+sofia相关：
+- sip_authentication
+- sip_dialogs
+- sip_presence
+- sip_registrations
+- sip_shared_appearance_dialogs
+- sip_shared_appearance_subscriptions
+- sip_subscriptions
+
+limit相关：
+- db_data
+- group_data
+- limit_data
+
+fifo相关：
+- fifo_bridge
+- fifo_callers
+- fifo_outbound
+
+语音信箱相关：
+- voicemail_msgs
+- voicemail_prefs
 
