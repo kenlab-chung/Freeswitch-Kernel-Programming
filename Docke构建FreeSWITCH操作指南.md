@@ -29,11 +29,14 @@ docker images
 编写docker-compose文件
 ```
 version: '3'  # Docker Compose file version
+
 services:
   db:
-    image: bsoft-postgresql:ori
+    image: bsoft-postgresql:v1.0.0
     restart: always
     container_name: bsoft-db
+    volumes:
+      - /opt/postgresql-16/data:/var/lib/postgresql/data
     ports:
       - "5433:5432"
 
