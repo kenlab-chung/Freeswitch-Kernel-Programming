@@ -1,1 +1,57 @@
 # Docker 构建FreeSWITCH 操作指南
+## 构建PostgreSQL数据库
+创建文件Dockerfile.postgres
+```
+# 指定基础镜像
+FROM postgres:latest
+ 
+# 设置数据库密码（如果需要）
+ENV POSTGRES_PASSWORD=postgres
+ 
+# 将本地目录与容器内部的/var/lib/postgresql/data目录关联起来
+VOLUME /var/lib/postgresql/data
+ 
+# 复制自定义配置文件到容器内部
+# COPY postgresql.conf /etc/postgresql/postgresql.conf
+ 
+# 运行postgres命令初始化数据库
+CMD ["postgres"]
+```
+执行一下命令构建镜像：
+```
+sudo docker build -f ./Dockerfile.postgres  -t bsoft-postgresql:ori .
+```
+构建完成后可以查看已生成的镜像列表：
+```
+docker images
+```
+## 启动docker 镜像
+编写docker-compose文件
+```
+version: '3'  # Docker Compose file version
+services:
+  db:
+    image: bsoft-postgresql:ori
+    restart: always
+    container_name: bsoft-db
+    ports:
+      - "5433:5432"
+
+```
+执行如下指令启动docker
+```
+sudo docker-compose -f docker-compose.yml up //sudo docker-compose -f docker-compose.yml up -d 表示后台启动
+```
+修改容器内容后，需要保存为镜像，可以导出到其它地方使用：
+```
+sudo docker commit 67890320b1ed bsoft-postgresql:v1.0.0
+sudo docker save -o /opt/bsoft-postgresql-v1.0.0.tar bsoft-postgresql:v1.0.0
+```
+在其它地方导入镜像：
+```
+docker load -i /home/bsoft-postgresql-v1.0.0.tar
+```
+使用docker-compose 启动docker容器
+```
+sudo docker-compose -f docker-compose.yml up -d
+```
