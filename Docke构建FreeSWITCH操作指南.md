@@ -58,3 +58,48 @@ docker load -i /home/bsoft-postgresql-v1.0.0.tar
 ```
 sudo docker-compose -f docker-compose.yml up -d
 ```
+
+## 构建FreeSWITCH软交换
+
+创建文件Dockerfile.postgres
+```
+# 指定基础镜像
+FROM debian:bullseye
+
+COPY ./lib/ /usr/local/lib/
+COPY ./bsoft-switch/bin/ /usr/local/freeswitch/bin/
+COPY ./bsoft-switch/conf/ /usr/local/freeswitch/conf/
+COPY ./bsoft-switch/fonts/ /usr/local/freeswitch/fonts/
+COPY ./bsoft-switch/grammar/ /usr/local/freeswitch/grammar/
+COPY ./bsoft-switch/htdocs/ /usr/local/freeswitch/htdocs/
+COPY ./bsoft-switch/images/ /usr/local/freeswitch/images/
+COPY ./bsoft-switch/lib/ /usr/local/freeswitch/lib/
+COPY ./bsoft-switch/mod/ /usr/local/freeswitch/mod/
+COPY ./bsoft-switch/scripts/ /usr/local/freeswitch/scripts/
+COPY ./bsoft-switch/sounds/ /usr/local/freeswitch/sounds/
+COPY ./bsoft-switch/include/ /usr/local/freeswitch/include/
+COPY ./bsoft-switch/storage/ /usr/local/freeswitch/storage/
+
+
+CMD ["/usr/local/freeswitch/bin/freeswitch","-c"]
+```
+## 启动FreeSWITCH 镜像
+编写docker-compose文件
+```
+version: '3'  # Docker Compose file version
+
+services:
+  bsoft-switch:
+    image: bsoft-switch:ori
+    #restart: always
+    container_name: bsoft-switch
+    volumes:
+      - /opt/bsoft-switch/conf:/usr/local/freeswitch/conf
+        #ports:
+        #- "5433:5432"
+```
+## docker-compose安装
+```
+sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+sudo chmod +x /usr/local/bin/docker-compose
+```
