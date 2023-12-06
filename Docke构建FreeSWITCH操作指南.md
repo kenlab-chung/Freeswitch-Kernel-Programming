@@ -9,7 +9,7 @@ FROM postgres:latest
 ENV POSTGRES_PASSWORD=postgres
  
 # 将本地目录与容器内部的/var/lib/postgresql/data目录关联起来
-VOLUME /var/lib/postgresql/data
+#VOLUME /var/lib/postgresql/data
  
 # 复制自定义配置文件到容器内部
 # COPY postgresql.conf /etc/postgresql/postgresql.conf
@@ -33,7 +33,7 @@ version: '3'  # Docker Compose file version
 services:
   db:
     image: bsoft-postgresql:v1.0.0
-    restart: always
+    #restart: always
     container_name: bsoft-db
     volumes:
       - /opt/postgresql-16/data:/var/lib/postgresql/data
@@ -47,12 +47,12 @@ sudo docker-compose -f docker-compose.yml up //sudo docker-compose -f docker-com
 ```
 修改容器内容后，需要保存为镜像，可以导出到其它地方使用：
 ```
-sudo docker commit 67890320b1ed bsoft-postgresql:v1.0.0
-sudo docker save -o /opt/bsoft-postgresql-v1.0.0.tar bsoft-postgresql:v1.0.0
+sudo docker commit 67890320b1ed bsoft-pg:v1.0.0
+sudo docker save -o /opt/bsoft-pg-v1.0.0.tar bsoft-pg:v1.0.0
 ```
 在其它地方导入镜像：
 ```
-docker load -i /home/bsoft-postgresql-v1.0.0.tar
+docker load -i /home/bsoft-pg-v1.0.0.tar
 ```
 使用docker-compose 启动docker容器
 ```
@@ -93,10 +93,18 @@ services:
     image: bsoft-switch:ori
     #restart: always
     container_name: bsoft-switch
+    network_mode: host #host 模式启动时，不需要映射端口
     volumes:
       - /opt/bsoft-switch/conf:/usr/local/freeswitch/conf
-        #ports:
-        #- "5433:5432"
+      - /opt/bsoft-switch/recordings:/usr/local/freeswitch/recordings
+      - /opt/bsoft-switch/scripts:/usr/local/freeswitch/scripts
+      - /opt/bsoft-switch/certs:/usr/local/freeswitch/certs
+      - /opt/bsoft-switch/log:/usr/local/freeswitch/log
+
+        #ports: 
+        #- "5060:5060"
+        #- "5080:5080"
+
 ```
 ## docker-compose安装
 ```
