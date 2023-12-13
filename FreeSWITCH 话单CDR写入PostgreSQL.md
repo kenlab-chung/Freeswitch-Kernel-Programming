@@ -1,34 +1,37 @@
-视频教程:
-https://edu.csdn.net/course/detail/35615
-
-webassembly ffmpeg测试项目:
-
-网页播放效果图:
-![image](https://user-images.githubusercontent.com/18042866/126866328-39936e79-032c-4305-a1a2-7c39c8e5531c.png)
-
-目录介绍:
-
-nginx:
-web服务器
-
-server: 
-websocket server服务器程序
-
-moudle： 
-项目中使用的第三方开源库.
-
-web-client:
-webassembly + ffmpeg h264 decode + webgl
-
-编译emcc ffmpeg  lib库:
-./doc/build_ffmpeg-emcc.sh
-
-编译ffmpeg.js和ffmpeg.wasm
-./doc/build_wasm.sh
-
-播放流程:
-
-1.启动server
-2.启动nginx server.
-3.http://ip:port/index.html
-
+# FreeSWITCH 话单CDR写入PostgreSQL数据库
+## 1 编译mod_cdr_pg_csv模块
+取消在modules.conf中取消对event_handlers/mod_cdr_pg_csv的注释
+在freeswitch源码路径下执行
+```
+./configure --enable-core-pgsql-support --prefix=/opt/freeswitch_install/
+make mod_cdr_pg_csv-install
+```
+## 2 手动建表
+手动创建数据库cdr表，语句如下：
+```
+create table cdr (
+    id                        serial primary key,
+    local_ip_v4               inet not null,
+    caller_id_name            varchar,
+    caller_id_number          varchar,
+    destination_number        varchar not null,
+    context                   varchar not null,
+    start_stamp               timestamp with time zone not null,
+    answer_stamp              timestamp with time zone,
+    end_stamp                 timestamp with time zone not null,
+    duration                  int not null,
+    billsec                   int not null,
+    hangup_cause              varchar not null,
+    uuid                      uuid not null,
+    bleg_uuid                 uuid,
+    accountcode               varchar,
+    read_codec                varchar,
+    write_codec               varchar,
+    sip_hangup_disposition    varchar,
+    ani                       varchar
+);
+```
+## 3 加载模块
+```
+load mod_cdr_pg_csv
+```
