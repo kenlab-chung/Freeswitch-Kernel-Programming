@@ -31,7 +31,12 @@ create table cdr (
     ani                       varchar
 );
 ```
-## 3 加载模块
+## 3 修改配置
+修改cdr_pg_csv.conf.xm配置文件中数据库连接信息：
+```
+<param name="db-info" value="host=127.0.0.1 dbname=freeswitch user=postgres password=postgres connect_timeout=10" />
+```
+## 4 加载模块
 ```
 load mod_cdr_pg_csv
 ```
