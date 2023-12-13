@@ -135,9 +135,14 @@ cp -rf /opt/freeswitch-1.8.7/html5/verto/video_demo  /var/www/html
 ```
 此外verto还提供了不带视频的demo和verto_communicator。
 
-打开浏览器（我用的Chrome）访问https://IP/video_demo。提示未信任时，选高级，点击继续。
+打开浏览器（我用的Chrome）访问
+```
+https://IP/video_demo
+```
+提示未信任时，选高级，点击继续。
 
 ## 6 nginx服务配置
 如下图所示：
 其中wss.key为私钥
+![image](https://github.com/kenlab-chung/Freeswitch-Kernel-Programming/assets/59462735/f3d95042-4445-46cb-8155-61378f8af136)
 
