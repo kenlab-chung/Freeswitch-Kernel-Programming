@@ -1,5 +1,6 @@
 # FreeSWITCH 新增网关
 本文介绍认证模式网关配置
+
 配置demo如下，文件存放路径/freeswitch/conf/sip_profiles/external/gw01.xml：
 ```
 <include>
