@@ -19,6 +19,10 @@
 ## 7 媒体操作函数
 - switch_core_session_read_frame：从session中读取一帧媒体数据，同时负责检测DTMF,收到DTMF的情况下会调用相关回调函数。这里的一帧，在SIP协议中即为一个RTP包。当读不到数据时，函数返回一个禁音包(CNG，即Comfort Noise Generation)。函数最终是调用Endpoints提供的read_fame()回调函数读取数据。
 - switch_core_session_write_frame：将音频数据写入session，发送至远端。在函数中调用perform_write()函数实现数据发送，而perform_write()函数最终调用Endpoint中的write_frame()回调函数实现数据发送功能。
+- switch_core_media_read_frame：从底层的RTP中读取一帧媒体数据，其中type参数取值为：SWITCH_MEDIA_TYPE_AUDIO（音频数据）和SWITCH_MEDIA_TYPE_VIDEO（视频数据）。
+- switch_rtp_zerocopy_read_frame：读取一帧媒体数据。
+- switch_core_media_write_frame：调用底层switch_rtp_write_frame()函数完成RTP数据发送功能。
+- switch_rtp_write_frame：发送rtp数据。
 ## 8 Session操作函数
 
 ## 9 Channel操作函数
