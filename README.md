@@ -43,3 +43,8 @@
 ## 9 Channel操作函数
 - switch_channel_ready：检测Channel是否正常，Channel正常建立时返回true，挂机或其他错误情况时返回false。
 
+## 10 xml配置文件操作函数
+
+## 11 事件操作函数
+
+## 12 文件操作函数
