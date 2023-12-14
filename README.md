@@ -5,6 +5,8 @@
 ## 2 字符串操作函数
 
 ## 3 正则表达式函数
+- switch_regex_match：
+
 
 ## 4 内存函数
 ## 5 线程函数 
@@ -37,7 +39,7 @@
   - switch_socket_sendto：发送RTP包。
   - switch_rtp_new：建立一个新的rtp_session。rx_host和rx_port为本端IP地址和端口号，tx_host和tx_port分别为远端IP地址和端口号。
   - switch_rtp_destroy：释放一个rtp_sesion。
-  
+
 ## 8 Session操作函数
 
 ## 9 Channel操作函数
