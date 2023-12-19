@@ -106,6 +106,32 @@ services:
         #- "5080:5080"
 
 ```
+非host 模式启动
+```version: '3'  # Docker Compose file version
+
+services:
+  bsoft-switch:
+    image: bsoft-switch:v1.0.1
+    #restart: always
+    container_name: bsoft-switch
+    #network_mode: host
+    volumes:
+      - /opt/bsoft-switch/conf:/usr/local/freeswitch/conf
+      - /opt/bsoft-switch/recordings:/usr/local/freeswitch/recordings
+      - /opt/bsoft-switch/scripts:/usr/local/freeswitch/scripts
+      - /opt/bsoft-switch/certs:/usr/local/freeswitch/certs
+      - /opt/bsoft-switch/log:/usr/local/freeswitch/log
+
+    ports:
+      - "5060:5060/udp"
+      - "5080:5080/udp"
+      - "5060:5060"
+      - "5080:5080"
+      - "16384-16584:16384-16584/udp"
+      - "8021:8021"
+
+
+```
 ## docker-compose安装
 ```
 sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
