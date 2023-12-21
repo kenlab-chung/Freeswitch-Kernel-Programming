@@ -137,3 +137,92 @@ services:
 sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
 sudo chmod +x /usr/local/bin/docker-compose
 ```
+## 构建ZLMediaKit镜像
+Dockerfile
+```
+# 指定基础镜像
+FROM debian:bullseye
+
+COPY ./bsoft-media/lib/ /usr/local/lib/
+COPY ./bsoft-media/MediaServer /opt/BsoftMedia/
+COPY ./bsoft-media/config.ini /opt/BsoftMedia/conf/
+COPY ./bsoft-media/supervisord.media.conf /etc/supervisor/conf.d/supervisord.conf
+RUN ldconfig
+RUN apt-get update && apt-get install -y supervisor
+RUN apt-get autoremove
+RUN chmod a+x /opt/BsoftMedia/MediaServer
+```
+supervisord.conf
+```
+[supervisord]
+nodaemon=true
+
+[program:first_app]
+command=/opt/BsoftMedia/MediaServer -c /opt/BsoftMedia/conf/config.ini
+```
+docker-compose.yml
+```
+version: '3'  # Docker Compose file version
+
+services:
+  bsoft-media:
+    image: bsoft-media:ori
+    #restart: always
+    container_name: bsoft-media
+    volumes:
+      - /opt/bsoft-media/conf/:/opt/BsoftMedia/conf/
+      - /opt/bsoft-media/logs/media/:/opt/BsoftMedia/log/
+
+    ports:
+      - "554:554"
+      - "332:332"
+      - "1935:1935"
+      - "19350:19350"
+      - "80:80"
+      - "443:443"
+      - "9000:9000"
+      - "10000:10000"
+      - "9000:9000/udp"
+      - "10000:10000/udp"
+      - "50000-50300:50000-50300/udp"
+```
+## 构建GB28181镜像
+Dockerfile
+```
+# 指定基础镜像
+FROM debian:bullseye
+
+WORKDIR /opt/BsoftMedia/
+
+RUN apt-get update && apt-get install -y openjdk-11-jdk
+
+COPY ./bsoft-media/wvp-pro-2.6.9-08180706.jar .
+COPY ./bsoft-media/application-local.yml ./conf/
+
+#COPY ./bsoft-media/supervisord.gb.conf /etc/supervisor/conf.d/supervisord.conf
+
+RUN chmod a+x /opt/BsoftMedia/wvp-pro-2.6.9-08180706.jar
+RUN apt-get autoremove
+
+CMD ["java","-jar","wvp-pro-2.6.9-08180706.jar"]
+
+```
+docker-compose.yml
+```
+version: '3'  # Docker Compose file version
+
+services:
+  bsoft-media-gb28181:
+    image: bsoft-media-gb28181:v1.0.0
+    #restart: always
+    container_name: bsoft-media-gb28181-v1.0.0
+    command: ["java", "-jar", "wvp-pro-2.6.9-08180706.jar","--spring.config.location=./conf/application-local.yml"]
+    volumes:
+      - /opt/bsoft-media/conf/:/opt/BsoftMedia/conf/
+      - /opt/bsoft-media/logs/gb28181/:/logs/
+    ports:
+      - "18080:18080"
+      - "5090:5090"
+      - "5090:5090/udp"
+
+```
