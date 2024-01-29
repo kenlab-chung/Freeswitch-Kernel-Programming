@@ -3,12 +3,29 @@
 ## 2 状态机
 ## 3 事件
 ## 4 跨平台设计
-
+### 4.1 APR库重构
 FreeSWITCH使用Apahce APR库调用计算机资源操作接口。APR主要目的包括：
 - 为不同操作系统平台提供文件系统访问、网络编程、进程管理、线程管理、共享内存等一致性功能接口。
-- 实现系统内存、内存池、数据结构、互斥锁等各种资源的管理和抽象。
+- 封装字符串处理、队列、socket、内存、内存池、数据结构、互斥锁等各种资源的管理和抽象。
 
 为解决FreeSWITCH内部命名空间冲突问题，APR改名为fspr_，并在switch_apr.c文件中对APR库进行二次封装，冠以“switch_”命名空间，这样所有的内核函数都有了一致的命名空间。
+
+### 4.2 APR 函数返回值
+在APR库中规定：函数返回一个状态值，为调用者提供一个fspr_status_t返回值。这个值与FreeSWITCH中switch_status_t对应，因为我们看到在fspr_前缀函数在switch_apr.c文件中switch_前缀函数中返回时，直接转换为switch_status_t类型。
+
+主要注意的是switch_前缀函数返回状态值SWITCH_STATUS_SUCCESS与APR_SUCCESS对应，而且他们的枚举值都为0。所以在判断函数返回值是否成功时应该这样判断：
+```
+switch_status_t status =switch_dir_make();
+if(status==SWITCH_STATUS_SUCCESS)
+{
+  // Success 
+}
+else
+{
+  //Failure
+}
+```
+另外某些函数返回一个字符串(char* 或者const char*)或者函数返回类型为void*或者void时，函数发生错误时返回一个空指针或者默认函数执行成功。
 
 ## 5 常用函数
 ## 6 模块开发
