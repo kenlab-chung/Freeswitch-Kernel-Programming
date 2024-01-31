@@ -1,6 +1,6 @@
 # draft
 ## 1 启动流程
-
+main启动时，调用核心函数switch_core_init_and_modload(),在switch_core_init_and_modload()内部分别调用switch_core_init()和switch_loadable_module_init()函数初始化内核和加载外围模块。
 ## 2 核心数据结构
 ### 2.1 Session与Channel
 当有电话呼入FreeSWITCH或者FreeSWITCH发起一路电话，建产生一个Session，同时生产一个Channel。Session与Channel一一对应，前者更多关注控制信令层，后者更关注媒体层。一个switch_core_session结构体实例代表一个session。switch_core_session结构体中包含Channel结构体指针。
