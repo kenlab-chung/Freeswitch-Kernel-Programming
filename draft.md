@@ -7,7 +7,6 @@
 
 对于在FreeSWITCH库或者FreeSWITCH内部模块，Seesion内部的东西是私有的，想要获取session中Channel不能直接调用session‑>channel而只能调用switch_core_session_get_channel(session)来获取Channel信息。
 
-
 ### 2.2 状态机
 
 ## 4 跨平台设计
