@@ -4,6 +4,10 @@
 ## 2 核心数据结构
 ### 2.1 Session与Channel
 当有电话呼入FreeSWITCH或者FreeSWITCH发起一路电话，建产生一个Session，同时生产一个Channel。Session与Channel一一对应，前者更多关注控制信令层，后者更关注媒体层。一个switch_core_session结构体实例代表一个session。switch_core_session结构体中包含Channel结构体指针。
+
+对于在FreeSWITCH库或者FreeSWITCH内部模块，Seesion内部的东西是私有的，想要获取session中Channel不能直接调用session‑>channel而只能调用switch_core_session_get_channel(session)来获取Channel信息。
+
+
 ### 2.2 状态机
 
 ## 4 跨平台设计
