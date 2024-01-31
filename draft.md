@@ -8,6 +8,25 @@
 对于在FreeSWITCH库或者FreeSWITCH内部模块，Seesion内部的东西是私有的，想要获取session中Channel不能直接调用session‑>channel而只能调用switch_core_session_get_channel(session)来获取Channel信息。
 
 ### 2.2 状态机
+状态机处理函数为switch_core_session_run，而整个状态机工作在Channel上面的。switch_core_session_run内部为一个循环，只要Session所对应的Channel状态不是CS_DESTROY，则一直循环。状态机所有状态定义如下：
+```
+typedef enum {
+	CS_NEW,             //新建
+	CS_INIT,            //已初始化
+	CS_ROUTING,         //路由
+	CS_SOFT_EXECUTE,    //准备好执行，可由第三方控制
+	CS_EXECUTE,         //执行Dialplan中的App
+	CS_EXCHANGE_MEDIA,  //与另一个Channel交换媒体
+	CS_PARK,            //等待进一步的命令指示
+	CS_CONSUME_MEDIA,   //消费掉媒体并丢弃
+	CS_HIBERNATE,       //sleep
+	CS_RESET,           //重置
+	CS_HANGUP,          //挂机，结束信令和媒体交换
+	CS_REPORTING,       //收集呼叫信息，如写CDR等
+	CS_DESTROY,         //待销毁，退出状态机
+	CS_NONE             //无效
+} switch_channel_state_t;
+```
 
 ## 4 跨平台设计
 ### 4.1 APR库重构
