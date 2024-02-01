@@ -27,6 +27,11 @@ typedef enum {
 	CS_NONE             //无效
 } switch_channel_state_t;
 ```
+调用switch_channel_set_state()函数修改状态机的状态。
+当状态发生变化事，内核通过switch_channel_set_running_state()函数来改变running_state，并执行相关的回调来通知相应终端通知其状态已经发送改变：
+```
+endpoint_interface->io_routines->state_run
+```
 
 ## 4 跨平台设计
 ### 4.1 APR库重构
