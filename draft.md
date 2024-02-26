@@ -102,7 +102,7 @@ FreeSWITCH中模块函数声明：
   sudo docker load -i ./docker-bsoft-fs-x64-v1.0.3.tar
   ```
 ### 8.2 docker网络
-- 网桥工具安装
+#### 8.2.1 网桥工具安装
   
 ```
 wget https://www.kernel.org/pub/linux/utils/net/bridge-utils/bridge-utils-1.7.1.tar.xz
@@ -113,7 +113,7 @@ autoconf
 make
 make install
 ```
-- 默认网络
+#### 8.2.1 默认网络
   
 安装docker时，会自动创建三个网络：bridge（创建容器默认连接到此网络）、host、none。
 ```
@@ -123,3 +123,6 @@ c531a28c2221        bridge              bridge
 6f1e18f3b5dd        none                null
 5f6d09e593d7        host                host
 ```
+##### 8.2.1.1 Host模式
+与宿主机同在一个网络中，没有独立IP地址。
+
