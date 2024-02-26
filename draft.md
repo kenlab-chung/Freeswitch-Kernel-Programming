@@ -182,3 +182,20 @@ bridge模式是docker默认的网络设置，此模式会为每个容器分配Ne
 ##### 8.2.3.2 docker网络模型详解
 docker完成以上网络配置的过程大致如下：
 
+- 在主机上创建一对虚拟网卡veth pair设备。veth设备总是成对出现的，它们组成了一个数据的通道，数据从一个设备进入，就会从另一个设备出来。因此，veth设备常用来连接两个网络设备。
+- docker将veth pair设备的一端放在新创建的容器中，并命名为eth0。另一端放在主机中，以veth*这样类似的名字命名，并将这个网络设备加入到docker0网桥中，可以通过brctl show命令查看：
+
+![image](https://github.com/kenlab-chung/Freeswitch-Kernel-Programming/assets/59462735/69645373-e119-46d6-8f45-af2ac4565fb5)
+
+```
+#查看容器网络
+docker inspect 容器id
+#查看网络
+docker network ls
+docker network inspect bridge名称
+```
+如下图：
+
+![image](https://github.com/kenlab-chung/Freeswitch-Kernel-Programming/assets/59462735/dacb73cc-b04e-496d-b99d-7d4009567ea2)
+
+
