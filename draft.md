@@ -132,6 +132,25 @@ Docker使用Linux的Namespaces技术来进行资源隔离，如PID Namespaces隔
 
 一个docker容器一般会分配一个独立的Network Namespaces。
 
-如果启动容器的时候使用host模式，那么这个容器将不会获得独立的Network Namespaces，而是和宿主机共用一个Network Namespaces。
+如果启动容器的时候使用host模式，那么这个容器将不会获得独立的Network Namespaces，而是和宿主机共用一个Network Namespaces。也就是说，容器不会虚拟出自己的网卡，配置自己的IP等，而是使用宿主机的IP和端口号。
 
+例如：我们在10.10.0.178/24的主机上用host模式启动一个nginx容器，监听tcp 80端口。
+```
+#运行容器
+$ docker run --name=nginx-host --net=host -p 80:80 -d nginx
+c531a28c222145a79870577839b30a4e63a4a0e928cd0325eafaad46eb590162
 
+#查看容器
+$ docker ps
+
+CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS              PORTS               NAMES
+c531a28c2221        nginx               "nginx -g 'daemon ..."   25 seconds ago      Up 25 seconds                           nginx-host
+```
+当我们在容器中执行ifconfig命令查看网络环境时，看到的都是宿主机上的信息。而外界访问容器中的应用，则直接使用10.10.0.178:80即可，不用任何NAT转换，如同容器中的应用直接运行在宿主机上。但是容器的其他方面，如文件系统、进程列表还是和宿主机隔离的。
+```
+$ netstat -nplt | grep nginx
+tcp        0      0 0.0.0.0:80              0.0.0.0:*               LISTEN      27340/nginx: master
+```
+##### 8.2.1.2 Container模式
+这个模式指定新创建的容器和已经存在的一个容器共享一个Network Namespaces，而不是和宿主机共享。新建的容器不会创建自己的网卡，也不会配置自己的IP，而是和一个指定的容器共享IP、端口范围。同样，两个容器处理网络方面，其它的如文件系统、进程列表还是隔离的。两个容器可以通过IO网卡设备进行通讯。
+##### 8.2.1.3 None模式
