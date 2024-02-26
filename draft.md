@@ -113,7 +113,7 @@ autoconf
 make
 make install
 ```
-#### 8.2.1 默认网络
+#### 8.2.2 默认网络
   
 安装docker时，会自动创建三个网络：bridge（创建容器默认连接到此网络）、host、none。
 ```
@@ -123,7 +123,7 @@ c531a28c2221        bridge              bridge
 6f1e18f3b5dd        none                null
 5f6d09e593d7        host                host
 ```
-##### 8.2.1.1 Host模式
+##### 8.2.2.1 Host模式
 与宿主机同在一个网络中，没有独立IP地址。
 
 Docker使用Linux的Namespaces技术来进行资源隔离，如PID Namespaces隔离进程，Mount Namespaces隔离文件系统，Network Namespaces隔离网络等。
@@ -151,9 +151,9 @@ c531a28c2221        nginx               "nginx -g 'daemon ..."   25 seconds ago 
 $ netstat -nplt | grep nginx
 tcp        0      0 0.0.0.0:80              0.0.0.0:*               LISTEN      27340/nginx: master
 ```
-##### 8.2.1.2 Container模式
+##### 8.2.2.2 Container模式
 这个模式指定新创建的容器和已经存在的一个容器共享一个Network Namespaces，而不是和宿主机共享。新建的容器不会创建自己的网卡，也不会配置自己的IP，而是和一个指定的容器共享IP、端口范围。同样，两个容器处理网络方面，其它的如文件系统、进程列表还是隔离的。两个容器可以通过IO网卡设备进行通讯。
-##### 8.2.1.3 None模式
+##### 8.2.2.3 None模式
 该模式将容易放置在它自己的网络栈中，但是并不进行任何配置。实际上，该模式关闭了容器的网络功能，在以下情况是有用的：
 
 容器并不需要网络（例如，值需要写磁盘卷的批处理任务）
@@ -161,10 +161,22 @@ tcp        0      0 0.0.0.0:80              0.0.0.0:*               LISTEN      
 overlay
 
 在docker1.7代码进行了重构，单独把网络部分独立出来编写，所以在docker1.8新加入的一个overlay网络模式。dokcer对于网络访问的控制也是在逐渐完善的。
-##### 8.2.1.4 Bridge模式
+##### 8.2.2.4 Bridge模式
 相当于VMware中的NAT模式，容器使用独立的Network Namespaces，并连接到docker0虚拟网卡（默认模式）。通过docker0网卡以及iptables nat表于宿主机通信。
 
 bridge模式是docker默认的网络设置，此模式会为每个容器分配Network Namespaces、设置IP等，并行主机上的docker容器连接到一个虚拟网桥上。
 
-#### 8.2.1 Bridge模式详解
+#### 8.2.3 Bridge模式详解
+##### 8.2.3.1 Bridge模式的拓扑
+当Docker server启动时，会在主机上创建一个名为Docker0的虚拟网桥，此主机上启动的Docker容器会连接到这个虚拟的网桥上。
+
+虚拟网桥的工作方式和物理交换机类似，这样主机上的所有容器就通过网络交换机连在了一个二层网络中。
+
+接下来就要为容器 分配IP了，Docker会从RFC1919所定义的私有IP网段中，选择一个和宿主机不同的IP地址和子网络分配给Docker0，连接到docker0的容器就从这个子网中选择一个未占用的IP使用。
+
+例如：一般docker会使用172.17.0.0/16 这个网段，并将172.17.0.1/16分配给docker0网桥（在主机上使用ifconfig命令是可以看到docker0的，可以任务它是网桥的管理接口，在宿主机上作为一块虚拟网卡使用）。
+
+单机环境下的网络拓扑如下，主机地址为10.10.0.186/24。
+![image](https://github.com/kenlab-chung/Freeswitch-Kernel-Programming/assets/59462735/7d88c33f-b06c-451a-a47f-337ac0e78ff5)
+
 
