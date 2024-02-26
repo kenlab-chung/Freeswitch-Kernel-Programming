@@ -88,3 +88,8 @@ FreeSWITCH中模块函数声明：
 ### 6.3 lua 开发
 ## 7 调试
 ## 8 云部署
+### 8.1 docker 常用操作命令
+- 构建docker镜像
+  ```
+  sudo docker build -f Dockerfile.switch-v1.0.3 -t bsoft-switch:v1.0.3 .
+  ```
