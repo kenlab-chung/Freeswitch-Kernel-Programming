@@ -93,3 +93,11 @@ FreeSWITCH中模块函数声明：
   ```
   sudo docker build -f Dockerfile.switch-v1.0.3 -t bsoft-switch:v1.0.3 .
   ```
+- 导出镜像
+  ```
+  sudo docker save -o docker-bsoft-fs-x64-v1.0.3.tar bsoft-switch:v1.0.3
+  ```
+- 导入镜像
+  ```
+  sudo docker load -i ./docker-bsoft-fs-x64-v1.0.3.tar
+  ```
