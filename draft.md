@@ -126,3 +126,12 @@ c531a28c2221        bridge              bridge
 ##### 8.2.1.1 Host模式
 与宿主机同在一个网络中，没有独立IP地址。
 
+Docker使用Linux的Namespaces技术来进行资源隔离，如PID Namespaces隔离进程，Mount Namespaces隔离文件系统，Network Namespaces隔离网络等。
+
+一个Network Namespaces 提供了一份独立的网络环境，包括网卡、路由、Iptable规则等都与其他的Network Namespaces隔离。
+
+一个docker容器一般会分配一个独立的Network Namespaces。
+
+如果启动容器的时候使用host模式，那么这个容器将不会获得独立的Network Namespaces，而是和宿主机共用一个Network Namespaces。
+
+
