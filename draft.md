@@ -177,6 +177,8 @@ bridge模式是docker默认的网络设置，此模式会为每个容器分配Ne
 例如：一般docker会使用172.17.0.0/16 这个网段，并将172.17.0.1/16分配给docker0网桥（在主机上使用ifconfig命令是可以看到docker0的，可以任务它是网桥的管理接口，在宿主机上作为一块虚拟网卡使用）。
 
 单机环境下的网络拓扑如下，主机地址为10.10.0.186/24。
-![image](https://github.com/kenlab-chung/Freeswitch-Kernel-Programming/assets/59462735/7d88c33f-b06c-451a-a47f-337ac0e78ff5)
 
+![image](https://github.com/kenlab-chung/Freeswitch-Kernel-Programming/assets/59462735/7d88c33f-b06c-451a-a47f-337ac0e78ff5)
+##### 8.2.3.2 docker网络模型详解
+docker完成以上网络配置的过程大致如下：
 
