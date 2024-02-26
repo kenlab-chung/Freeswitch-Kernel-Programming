@@ -201,3 +201,9 @@ docker network inspect bridge名称
 ##### 8.2.3.3 bridge模式下容器的通信
 在bridge模型下，连在同一个网桥上的容器可以相互通信（若出于安全考虑，也可以禁止它们之间通信，方法是在DOCKER_OPTS变量中设置--icc=false，这样只有使用--link才能使两个容器通信）。
 
+docker可以开启容器间通信（意味着默认配置为：-icc=false）,也就是说，宿主机上的所有容器都可以不受任何限制地互相通信，这可能导致拒绝服务攻击。进一步地，docker可以通过 --ip_forward和--iptables两个选项控制容器间、容器和外部世界的通信。
+
+容器也可以与外部通信，我们看下主机上的iptable规则，可以看到这么一条
+```
+-A POSTROUTING -s 172.17.0.0/16 ! -o docker0 -j MASQUERADE
+```
