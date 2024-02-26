@@ -198,4 +198,6 @@ docker network inspect bridge名称
 
 ![image](https://github.com/kenlab-chung/Freeswitch-Kernel-Programming/assets/59462735/dacb73cc-b04e-496d-b99d-7d4009567ea2)
 
+##### 8.2.3.3 bridge模式下容器的通信
+在bridge模型下，连在同一个网桥上的容器可以相互通信（若出于安全考虑，也可以禁止它们之间通信，方法是在DOCKER_OPTS变量中设置--icc=false，这样只有使用--link才能使两个容器通信）。
 
