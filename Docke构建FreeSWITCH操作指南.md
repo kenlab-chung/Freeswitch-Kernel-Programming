@@ -159,6 +159,7 @@ nodaemon=true
 
 [program:first_app]
 command=/opt/BsoftMedia/MediaServer -c /opt/BsoftMedia/conf/config.ini
+# command=/opt/BsoftMedia/MediaServer -c /opt/BsoftMedia/conf/config.ini -s /opt/BsoftMedia/conf/172.26.1.57.pem #启用证书
 ```
 docker-compose.yml
 ```
